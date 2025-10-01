@@ -1,4 +1,4 @@
-// base-crosschain-token-bridge/scripts/audit.js
+
 const { ethers } = require("hardhat");
 
 async function auditBridge() {
