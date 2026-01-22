@@ -20,7 +20,7 @@ async function analyzeBridgePerformance() {
   };
   
   try {
-    // Метрики транзакций
+
     const transactionMetrics = await bridge.getTransactionMetrics();
     performanceAnalytics.transactionMetrics = {
       totalTransactions: transactionMetrics.totalTransactions.toString(),
