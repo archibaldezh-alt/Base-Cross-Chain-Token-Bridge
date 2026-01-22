@@ -8,7 +8,7 @@ async function analyzeBridgePerformance() {
   const bridgeAddress = "0x...";
   const bridge = await ethers.getContractAt("CrossChainBridgeV3", bridgeAddress);
   
-  // Анализ производительности
+
   const performanceAnalytics = {
     timestamp: new Date().toISOString(),
     bridgeAddress: bridgeAddress,
