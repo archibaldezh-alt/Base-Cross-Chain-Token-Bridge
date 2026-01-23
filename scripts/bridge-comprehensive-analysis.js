@@ -21,7 +21,7 @@ async function comprehensiveBridgeAnalysis() {
   };
   
   try {
-    // Анализ производительности
+   
     const performance = await bridge.getPerformanceMetrics();
     comprehensiveReport.performance = {
       responseTime: performance.responseTime.toString(),
