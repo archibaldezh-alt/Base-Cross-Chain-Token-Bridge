@@ -31,7 +31,7 @@ async function comprehensiveBridgeAnalysis() {
       errorRate: performance.errorRate.toString()
     };
     
-    // Анализ безопасности
+ 
     const security = await bridge.getSecurityAssessment();
     comprehensiveReport.security = {
       securityScore: security.securityScore.toString(),
