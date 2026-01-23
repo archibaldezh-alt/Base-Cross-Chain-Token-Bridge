@@ -8,7 +8,7 @@ async function comprehensiveBridgeAnalysis() {
   const bridgeAddress = "0x...";
   const bridge = await ethers.getContractAt("CrossChainBridgeV3", bridgeAddress);
   
-  // Комплексный анализ
+
   const comprehensiveReport = {
     timestamp: new Date().toISOString(),
     bridgeAddress: bridgeAddress,
