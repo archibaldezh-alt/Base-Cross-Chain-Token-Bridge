@@ -595,4 +595,22 @@ contract CrossChainBridgeV3 is Ownable, ReentrancyGuard {
         if (block.timestamp >= transaction.timestamp + transactionTimeout) return false;
         return true;
     }
+    // Добавить функции:
+function optimizeFees(
+    uint256 chainId,
+    uint256 amount
+) external view returns (uint256) {
+    // Оптимизация комиссий
+    uint256 baseFee = (amount * 100) / 10000; // 1%
+    uint256 optimizedFee = baseFee * (10000 - 500) / 10000; // Снижение на 5%
+    return optimizedFee;
+}
+
+function getOptimizedRoute(
+    uint256 chainId,
+    uint256 amount
+) external view returns (address, uint256) {
+    // Получение оптимального маршрута
+    return (address(0), 0); // Реализация в будущем
+}
 }
