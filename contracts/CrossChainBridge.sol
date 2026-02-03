@@ -613,4 +613,175 @@ function getOptimizedRoute(
     // Получение оптимального маршрута
     return (address(0), 0); // Реализация в будущем
 }
+// Добавить структуры:
+struct DynamicFee {
+    uint256 chainId;
+    uint256 baseFee;
+    uint256 marketConditionFactor;
+    uint256 networkCongestion;
+    uint256 timeBasedAdjustment;
+    uint256 lastUpdateTime;
+    uint256 feeAdjustmentThreshold;
+    bool enabled;
+}
+
+struct FeeHistory {
+    uint256 chainId;
+    uint256 oldFee;
+    uint256 newFee;
+    uint256 timestamp;
+    string reason;
+}
+
+// Добавить маппинги:
+mapping(uint256 => DynamicFee) public dynamicFees;
+mapping(uint256 => FeeHistory[]) public feeHistory;
+
+// Добавить события:
+event DynamicFeeUpdated(
+    uint256 indexed chainId,
+    uint256 oldFee,
+    uint256 newFee,
+    uint256 timestamp,
+    string reason
+);
+
+event FeeCalculationTriggered(
+    uint256 indexed chainId,
+    uint256 calculatedFee,
+    uint256 timestamp
+);
+
+event FeeAdjustmentThresholdUpdated(
+    uint256 indexed chainId,
+    uint256 newThreshold,
+    uint256 timestamp
+);
+
+// Добавить функции:
+function setDynamicFee(
+    uint256 chainId,
+    uint256 baseFee,
+    uint256 marketConditionFactor,
+    uint256 networkCongestion,
+    uint256 feeAdjustmentThreshold
+) external onlyOwner {
+    require(chainId > 0, "Invalid chain ID");
+    require(baseFee <= 10000, "Base fee too high");
+    require(marketConditionFactor <= 10000, "Market factor too high");
+    require(networkCongestion <= 10000, "Network congestion too high");
+    
+    dynamicFees[chainId] = DynamicFee({
+        chainId: chainId,
+        baseFee: baseFee,
+        marketConditionFactor: marketConditionFactor,
+        networkCongestion: networkCongestion,
+        timeBasedAdjustment: 0,
+        lastUpdateTime: block.timestamp,
+        feeAdjustmentThreshold: feeAdjustmentThreshold,
+        enabled: true
+    });
+    
+    emit DynamicFeeUpdated(chainId, 0, baseFee, block.timestamp, "Initial fee setup");
+}
+
+function updateDynamicFee(
+    uint256 chainId,
+    string memory reason
+) external {
+    require(dynamicFees[chainId].chainId == chainId, "Fee not configured");
+    require(dynamicFees[chainId].enabled, "Fee not enabled");
+    
+    // Calculate new fee based on conditions
+    uint256 newFee = calculateDynamicFee(chainId);
+    
+    // Check if adjustment is needed
+    DynamicFee storage feeInfo = dynamicFees[chainId];
+    uint256 feeDifference = newFee > feeInfo.baseFee ? 
+        newFee - feeInfo.baseFee : 
+        feeInfo.baseFee - newFee;
+    
+    if (feeDifference >= feeInfo.feeAdjustmentThreshold) {
+        uint256 oldFee = feeInfo.baseFee;
+        feeInfo.baseFee = newFee;
+        feeInfo.lastUpdateTime = block.timestamp;
+        
+        // Record history
+        FeeHistory memory history = FeeHistory({
+            chainId: chainId,
+            oldFee: oldFee,
+            newFee: newFee,
+            timestamp: block.timestamp,
+            reason: reason
+        });
+        
+        feeHistory[chainId].push(history);
+        
+        emit DynamicFeeUpdated(chainId, oldFee, newFee, block.timestamp, reason);
+    }
+}
+
+function calculateDynamicFee(uint256 chainId) internal view returns (uint256) {
+    DynamicFee storage feeInfo = dynamicFees[chainId];
+    
+    // Base fee calculation with market conditions
+    uint256 baseFee = feeInfo.baseFee;
+    
+    // Market condition factor (simplified)
+    uint256 marketFactor = feeInfo.marketConditionFactor;
+    uint256 networkFactor = feeInfo.networkCongestion;
+    
+    // Time-based adjustment (simplified)
+    uint256 timeFactor = 10000; // Base time factor
+    
+    // Calculate dynamic fee
+    uint256 dynamicFee = baseFee + 
+                        (marketFactor * 100) + 
+                        (networkFactor * 50) + 
+                        (timeFactor * 20);
+    
+    // Cap at maximum reasonable fee
+    return dynamicFee > 10000 ? 10000 : dynamicFee; // 100%
+}
+
+function triggerFeeUpdate(uint256 chainId) external {
+    DynamicFee storage feeInfo = dynamicFees[chainId];
+    require(feeInfo.chainId == chainId, "Fee not configured");
+    
+    // Update fee based on current conditions
+    uint256 newFee = calculateDynamicFee(chainId);
+    
+    // Update time-based adjustment
+    feeInfo.timeBasedAdjustment = (block.timestamp % 3600) * 100; // Simplified
+    
+    emit FeeCalculationTriggered(chainId, newFee, block.timestamp);
+}
+
+function getDynamicFeeInfo(uint256 chainId) external view returns (DynamicFee memory) {
+    return dynamicFees[chainId];
+}
+
+function getFeeHistory(uint256 chainId) external view returns (FeeHistory[] memory) {
+    return feeHistory[chainId];
+}
+
+function getOptimalFee(uint256 chainId, uint256 amount) external view returns (uint256) {
+    DynamicFee storage feeInfo = dynamicFees[chainId];
+    
+    // Calculate optimal fee based on transaction amount
+    uint256 baseFee = feeInfo.baseFee;
+    uint256 amountFactor = amount / 1000000000000000000; // Convert to ETH
+    
+    uint256 optimalFee = baseFee + (amountFactor * 10); // 0.01% per ETH
+    
+    return optimalFee > 10000 ? 10000 : optimalFee; // 100%
+}
+
+function setFeeAdjustmentThreshold(uint256 chainId, uint256 newThreshold) external onlyOwner {
+    require(dynamicFees[chainId].chainId == chainId, "Fee not configured");
+    
+    dynamicFees[chainId].feeAdjustmentThreshold = newThreshold;
+    
+    emit FeeAdjustmentThresholdUpdated(chainId, newThreshold, block.timestamp);
+}
 }
