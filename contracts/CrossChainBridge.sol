@@ -784,6 +784,7 @@ function setFeeAdjustmentThreshold(uint256 chainId, uint256 newThreshold) extern
     
     emit FeeAdjustmentThresholdUpdated(chainId, newThreshold, block.timestamp);
 }
+    
     // Новые структуры для автоматического обновления комиссий
     struct DynamicFee {
         uint256 chainId;
@@ -855,49 +856,466 @@ function setFeeAdjustmentThreshold(uint256 chainId, uint256 newThreshold) extern
         uint256[] adjustmentDetails;
     }
     
-    struct FeeOptimizationStrategy {
-        string strategyName;
-        uint256 strategyType;
-        uint256[] optimizationParameters;
-        uint256[] optimizationWeights;
-        uint256[] optimizationThresholds;
-        uint256[] optimizationCapacities;
-        uint256[] optimizationFrequencies;
-        uint256[] optimizationMinFees;
-        uint256[] optimizationMaxFees;
-        uint256[] optimizationLastUpdates;
-        uint256[] optimizationCurrentFees;
-        uint256[] optimizationAvgFees;
-        uint256[] optimizationMinCapacities;
-        uint256[] optimizationMaxCapacities;
-        bool[] optimizationEnabled;
-        uint256[] optimizationMetrics;
-        uint256[] optimizationFactors;
-        uint256[] optimizationResults;
-        uint256[] optimizationScores;
-        uint256[] optimizationRisks;
-        uint256[] optimizationRewards;
-        uint256[] optimizationCosts;
-        uint256[] optimizationBenefits;
-        uint256[] optimizationEfficiencies;
-        uint256[] optimizationPerformance;
-        uint256[] optimizationSensitivities;
-        uint256[] optimizationCorrelations;
-        uint256[] optimizationDependencies;
-        uint256[] optimizationConstraints;
-        uint256[] optimizationObjectives;
-        uint256[] optimizationAlternatives;
-        uint256[] optimizationDecisions;
-        uint256[] optimizationOutcomes;
-        uint256[] optimizationImpacts;
-        uint256[] optimizationRisks;
-        uint256[] optimizationOpportunities;
-        uint256[] optimizationThreats;
-        uint256[] optimizationRecommendations;
-        uint256[] optimizationActions;
-        uint256[] optimizationResources;
-        uint256[] optimizationTimeline;
-        uint256[] optimizationBudget;
-        uint256[] optimizationSuccess;
-        uint25
+    // Новые маппинги
+    mapping(uint256 => DynamicFee) public dynamicFees;
+    mapping(address => FeeOptimizationConfig) public feeOptimizationConfigs;
+    mapping(uint256 => FeeMarketData) public feeMarketData;
+    mapping(uint256 => FeeAdjustmentHistory[]) public feeAdjustmentHistory;
+    mapping(uint256 => uint256) public chainTransactionCount;
+    mapping(uint256 => uint256) public chainVolume;
+    mapping(uint256 => uint256) public chainLastUpdate;
+    
+    // Новые события
+    event DynamicFeeUpdated(
+        uint256 indexed chainId,
+        uint256 oldFee,
+        uint256 newFee,
+        uint256 timestamp,
+        string reason
+    );
+    
+    event FeeOptimizationConfigUpdated(
+        address indexed chain,
+        uint256[] optimizationTargets,
+        uint256[] optimizationThresholds,
+        uint256[] optimizationWeights,
+        uint256[] optimizationPeriods,
+        bool[] optimizationEnabled
+    );
+    
+    event FeeMarketDataUpdated(
+        uint256 indexed chainId,
+        uint256 transactionVolume,
+        uint256 gasPrice,
+        uint256 networkActivity,
+        uint256 timestamp
+    );
+    
+    event FeeAdjustmentTriggered(
+        uint256 indexed chainId,
+        uint256 calculatedFee,
+        uint256 timestamp,
+        string adjustmentType
+    );
+    
+    event FeeOptimizationApplied(
+        uint256 indexed chainId,
+        uint256 optimizedFee,
+        uint256 optimizationScore,
+        uint256 timestamp
+    );
+    
+    // Новые функции для автоматического обновления комиссий
+    function setDynamicFee(
+        uint256 chainId,
+        uint256 baseFee,
+        uint256 marketConditionFactor,
+        uint256 networkCongestion,
+        uint256 feeAdjustmentThreshold,
+        uint256 maxFee,
+        uint256 minFee,
+        uint256 feeAdjustmentWindow
+    ) external onlyOwner {
+        require(chainId > 0, "Invalid chain ID");
+        require(baseFee <= 10000, "Base fee too high");
+        require(marketConditionFactor <= 10000, "Market factor too high");
+        require(networkCongestion <= 10000, "Network congestion too high");
+        require(feeAdjustmentThreshold <= 10000, "Adjustment threshold too high");
+        require(maxFee >= minFee, "Invalid fee limits");
+        
+        dynamicFees[chainId] = DynamicFee({
+            chainId: chainId,
+            baseFee: baseFee,
+            marketConditionFactor: marketConditionFactor,
+            networkCongestion: networkCongestion,
+            timeBasedAdjustment: 0,
+            lastUpdateTime: block.timestamp,
+            feeAdjustmentThreshold: feeAdjustmentThreshold,
+            maxFee: maxFee,
+            minFee: minFee,
+            enabled: true,
+            feeAdjustmentWindow: feeAdjustmentWindow,
+            feeHistory: new uint256[](0),
+            marketDataHistory: new uint256[](0),
+            networkDataHistory: new uint256[](0),
+            adjustmentHistory: new uint256[](0),
+            isFeeAdjustmentApplied: new mapping(uint256 => bool)
+        });
+        
+        emit DynamicFeeUpdated(chainId, 0, baseFee, block.timestamp, "Initial fee setup");
+    }
+    
+    function updateFeeOptimizationConfig(
+        address chain,
+        uint256[] memory optimizationTargets,
+        uint256[] memory optimizationThresholds,
+        uint256[] memory optimizationWeights,
+        uint256[] memory optimizationPeriods,
+        bool[] memory optimizationEnabled
+    ) external onlyOwner {
+        require(optimizationTargets.length == optimizationThresholds.length, "Array length mismatch");
+        require(optimizationTargets.length == optimizationWeights.length, "Array length mismatch");
+        require(optimizationTargets.length == optimizationPeriods.length, "Array length mismatch");
+        require(optimizationTargets.length == optimizationEnabled.length, "Array length mismatch");
+        
+        feeOptimizationConfigs[chain] = FeeOptimizationConfig({
+            targetChains: new address[](0),
+            optimizationTargets: optimizationTargets,
+            optimizationThresholds: optimizationThresholds,
+            optimizationWeights: optimizationWeights,
+            optimizationPeriods: optimizationPeriods,
+            optimizationCapacities: new uint256[](0),
+            optimizationFrequencies: new uint256[](0),
+            optimizationMinFees: new uint256[](0),
+            optimizationMaxFees: new uint256[](0),
+            optimizationEnabled: optimizationEnabled,
+            optimizationLastUpdates: new uint256[](0),
+            optimizationCurrentFees: new uint256[](0),
+            optimizationAvgFees: new uint256[](0),
+            optimizationMinCapacities: new uint256[](0),
+            optimizationMaxCapacities: new uint256[](0),
+            optimizationMethods: new string[](0)
+        });
+        
+        emit FeeOptimizationConfigUpdated(
+            chain,
+            optimizationTargets,
+            optimizationThresholds,
+            optimizationWeights,
+            optimizationPeriods,
+            optimizationEnabled
+        );
+    }
+    
+    function updateMarketData(
+        uint256 chainId,
+        uint256 transactionVolume,
+        uint256 gasPrice,
+        uint256 networkActivity,
+        uint256 priceImpact,
+        uint256 liquidity,
+        uint256 marketCap,
+        uint256 tradingVolume
+    ) external onlyOwner {
+        require(chainId > 0, "Invalid chain ID");
+        
+        feeMarketData[chainId] = FeeMarketData({
+            chainId: chainId,
+            transactionVolume: transactionVolume,
+            gasPrice: gasPrice,
+            networkActivity: networkActivity,
+            priceImpact: priceImpact,
+            liquidity: liquidity,
+            marketCap: marketCap,
+            tradingVolume: tradingVolume,
+            timestamp: block.timestamp,
+            recentVolumes: new uint256[](10),
+            recentGasPrices: new uint256[](10),
+            recentActivities: new uint256[](10),
+            recentPrices: new uint256[](10),
+            recentLiquidity: new uint256[](10),
+            recentMarketCaps: new uint256[](10),
+            recentTradingVolumes: new uint256[](10)
+        });
+        
+        // Обновить историю
+        feeMarketData[chainId].recentVolumes[0] = transactionVolume;
+        feeMarketData[chainId].recentGasPrices[0] = gasPrice;
+        feeMarketData[chainId].recentActivities[0] = networkActivity;
+        feeMarketData[chainId].recentPrices[0] = priceImpact;
+        feeMarketData[chainId].recentLiquidity[0] = liquidity;
+        feeMarketData[chainId].recentMarketCaps[0] = marketCap;
+        feeMarketData[chainId].recentTradingVolumes[0] = tradingVolume;
+        
+        emit FeeMarketDataUpdated(
+            chainId,
+            transactionVolume,
+            gasPrice,
+            networkActivity,
+            block.timestamp
+        );
+    }
+    
+    function calculateDynamicFee(
+        uint256 chainId,
+        uint256 amount
+    ) external view returns (uint256) {
+        DynamicFee storage feeInfo = dynamicFees[chainId];
+        FeeMarketData storage market = feeMarketData[chainId];
+        
+        if (!feeInfo.enabled) {
+            return feeInfo.baseFee;
+        }
+        
+        // Базовая формула динамического расчета комиссии
+        uint256 baseFee = feeInfo.baseFee;
+        
+        // Множитель рыночных условий
+        uint256 marketFactor = market.transactionVolume > 0 ? 
+            (market.transactionVolume * feeInfo.marketConditionFactor) / 1000000000 : 0;
+            
+        // Множитель сетевой загрузки
+        uint256 networkFactor = market.networkActivity > 0 ? 
+            (market.networkActivity * feeInfo.networkCongestion) / 1000000 : 0;
+            
+        // Временной фактор
+        uint256 timeFactor = (block.timestamp % 3600) * 1000; // 1000 wei за час
+        
+        // Общий коэффициент
+        uint256 totalMultiplier = baseFee + 
+                                marketFactor + 
+                                networkFactor + 
+                                timeFactor;
+        
+        // Ограничение максимальной и минимальной комиссии
+        uint256 calculatedFee = totalMultiplier;
+        if (calculatedFee > feeInfo.maxFee) {
+            calculatedFee = feeInfo.maxFee;
+        }
+        if (calculatedFee < feeInfo.minFee) {
+            calculatedFee = feeInfo.minFee;
+        }
+        
+        // Применить множитель объема
+        if (amount > 0) {
+            uint256 volumeFactor = amount / 1000000000000000000; // 1 ETH
+            calculatedFee = calculatedFee + (volumeFactor * 100000000000000000); // 0.1 ETH за каждый ETH
+        }
+        
+        return calculatedFee > 10000 ? 10000 : calculatedFee; // Максимум 100%
+    }
+    
+    function triggerFeeUpdate(
+        uint256 chainId,
+        uint256 amount
+    ) external {
+        DynamicFee storage feeInfo = dynamicFees[chainId];
+        require(feeInfo.enabled, "Fee not enabled");
+        
+        // Проверка времени обновления
+        require(block.timestamp >= feeInfo.lastUpdateTime + feeInfo.feeAdjustmentWindow, "Too early for fee update");
+        
+        // Расчет новой комиссии
+        uint256 newFee = calculateDynamicFee(chainId, amount);
+        
+        // Проверка изменения комиссии
+        uint256 feeDifference = newFee > feeInfo.baseFee ? 
+            newFee - feeInfo.baseFee : 
+            feeInfo.baseFee - newFee;
+        
+        if (feeDifference >= feeInfo.feeAdjustmentThreshold) {
+            // Обновить комиссию
+            uint256 oldFee = feeInfo.baseFee;
+            feeInfo.baseFee = newFee;
+            feeInfo.lastUpdateTime = block.timestamp;
+            
+            // Добавить в историю
+            feeInfo.feeHistory.push(newFee);
+            feeInfo.adjustmentHistory.push(feeDifference);
+            
+            // Записать историю изменения
+            feeAdjustmentHistory[chainId].push(FeeAdjustmentHistory({
+                chainId: chainId,
+                oldFee: oldFee,
+                newFee: newFee,
+                timestamp: block.timestamp,
+                reason: "Automatic adjustment",
+                adjustmentType: 1, // 1 - автоматическое
+                adjustmentValue: feeDifference,
+                relatedMetrics: new uint256[](0),
+                relatedFactors: new uint256[](0),
+                adjustmentDetails: new uint256[](0)
+            }));
+            
+            emit DynamicFeeUpdated(chainId, oldFee, newFee, block.timestamp, "Automatic adjustment");
+        }
+        
+        emit FeeAdjustmentTriggered(chainId, newFee, block.timestamp, "Automatic");
+    }
+    
+    function applyFeeOptimization(
+        uint256 chainId,
+        uint256 amount
+    ) external {
+        FeeMarketData storage market = feeMarketData[chainId];
+        DynamicFee storage feeInfo = dynamicFees[chainId];
+        
+        require(feeInfo.enabled, "Fee not enabled");
+        
+        // Простая логика оптимизации
+        uint256 baseFee = feeInfo.baseFee;
+        uint256 optimizationScore = 0;
+        
+        // Оптимизация на основе объема
+        if (market.transactionVolume > 1000000000000000000000) { // 1000 ETH
+            optimizationScore += 2000; // 20%
+        }
+        
+        // Оптимизация на основе сетевой активности
+        if (market.networkActivity > 5000) { // Высокая активность
+            optimizationScore += 1500; // 15%
+        }
+        
+        // Оптимизация на основе ликвидности
+        if (market.liquidity > 10000000000000000000000) { // 10000 ETH
+            optimizationScore += 1000; // 10%
+        }
+        
+        // Расчет оптимизированной комиссии
+        uint256 optimizedFee = baseFee - (baseFee * optimizationScore) / 10000;
+        
+        // Применить ограничения
+        if (optimizedFee < feeInfo.minFee) {
+            optimizedFee = feeInfo.minFee;
+        }
+        if (optimizedFee > feeInfo.maxFee) {
+            optimizedFee = feeInfo.maxFee;
+        }
+        
+        // Обновить комиссию
+        uint256 oldFee = feeInfo.baseFee;
+        feeInfo.baseFee = optimizedFee;
+        feeInfo.lastUpdateTime = block.timestamp;
+        
+        // Добавить в историю
+        feeInfo.feeHistory.push(optimizedFee);
+        
+        emit FeeOptimizationApplied(chainId, optimizedFee, optimizationScore, block.timestamp);
+    }
+    
+    function getDynamicFeeInfo(uint256 chainId) external view returns (DynamicFee memory) {
+        return dynamicFees[chainId];
+    }
+    
+    function getFeeMarketData(uint256 chainId) external view returns (FeeMarketData memory) {
+        return feeMarketData[chainId];
+    }
+    
+    function getFeeAdjustmentHistory(uint256 chainId) external view returns (FeeAdjustmentHistory[] memory) {
+        return feeAdjustmentHistory[chainId];
+    }
+    
+    function getOptimizationConfig(address chain) external view returns (FeeOptimizationConfig memory) {
+        return feeOptimizationConfigs[chain];
+    }
+    
+    function getChainStats(uint256 chainId) external view returns (
+        uint256 transactionCount,
+        uint256 volume,
+        uint256 avgFee,
+        uint256 lastUpdate,
+        uint256 currentFee
+    ) {
+        return (
+            chainTransactionCount[chainId],
+            chainVolume[chainId],
+            dynamicFees[chainId].baseFee,
+            chainLastUpdate[chainId],
+            dynamicFees[chainId].baseFee
+        );
+    }
+    
+    function getFeeOptimizationScore(
+        uint256 chainId,
+        uint256 amount
+    ) external view returns (uint256) {
+        FeeMarketData storage market = feeMarketData[chainId];
+        DynamicFee storage feeInfo = dynamicFees[chainId];
+        
+        uint256 score = 0;
+        
+        // Оценка на основе объема
+        if (market.transactionVolume > 1000000000000000000000) { // 1000 ETH
+            score += 2000;
+        }
+        
+        // Оценка на основе активности
+        if (market.networkActivity > 5000) {
+            score += 1500;
+        }
+        
+        // Оценка на основе ликвидности
+        if (market.liquidity > 10000000000000000000000) { // 10000 ETH
+            score += 1000;
+        }
+        
+        // Оценка на основе объема транзакций
+        if (amount > 1000000000000000000) { // 1 ETH
+            score += 500;
+        }
+        
+        return score > 10000 ? 10000 : score;
+    }
+    
+    function getOptimizedFee(
+        uint256 chainId,
+        uint256 amount
+    ) external view returns (uint256) {
+        return calculateDynamicFee(chainId, amount);
+    }
+    
+    function getFeeHistory(uint256 chainId, uint256 limit) external view returns (uint256[] memory) {
+        DynamicFee storage feeInfo = dynamicFees[chainId];
+        uint256[] memory history = new uint256[](limit < feeInfo.feeHistory.length ? limit : feeInfo.feeHistory.length);
+        
+        for (uint256 i = 0; i < history.length; i++) {
+            history[i] = feeInfo.feeHistory[feeInfo.feeHistory.length - 1 - i];
+        }
+        
+        return history;
+    }
+    
+    function getFeeStats() external view returns (
+        uint256 totalChains,
+        uint256 activeChains,
+        uint256 avgFee,
+        uint256 totalFeeUpdates,
+        uint256[] memory chainIds
+    ) {
+        uint256 totalChainsCount = 0;
+        uint256 activeChainsCount = 0;
+        uint256 totalFeeSum = 0;
+        uint256 totalFeeUpdatesCount = 0;
+        
+        // Подсчет статистики
+        for (uint256 i = 1; i < 1000; i++) {
+            if (dynamicFees[i].chainId != 0) {
+                totalChainsCount++;
+                totalFeeSum = totalFeeSum.add(dynamicFees[i].baseFee);
+                totalFeeUpdatesCount = totalFeeUpdatesCount.add(dynamicFees[i].feeHistory.length);
+                
+                if (dynamicFees[i].enabled) {
+                    activeChainsCount++;
+                }
+            }
+        }
+        
+        uint256 avgFeeValue = totalChainsCount > 0 ? totalFeeSum / totalChainsCount : 0;
+        
+        return (
+            totalChainsCount,
+            activeChainsCount,
+            avgFeeValue,
+            totalFeeUpdatesCount,
+            new uint256[](0) // Возвращаем пустой массив для примера
+        );
+    }
+    
+    function updateChainStats(
+        uint256 chainId,
+        uint256 transactionCount,
+        uint256 volume
+    ) external {
+        require(chainId > 0, "Invalid chain ID");
+        chainTransactionCount[chainId] = chainTransactionCount[chainId].add(transactionCount);
+        chainVolume[chainId] = chainVolume[chainId].add(volume);
+        chainLastUpdate[chainId] = block.timestamp;
+    }
+    
+    function resetFeeHistory(uint256 chainId) external onlyOwner {
+        require(chainId > 0, "Invalid chain ID");
+        DynamicFee storage feeInfo = dynamicFees[chainId];
+        feeInfo.feeHistory = new uint256[](0);
+        feeInfo.adjustmentHistory = new uint256[](0);
+    }
 }
