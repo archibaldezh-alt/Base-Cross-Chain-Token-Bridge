@@ -613,7 +613,7 @@ function getOptimizedRoute(
     // Получение оптимального маршрута
     return (address(0), 0); // Реализация в будущем
 }
-// Добавить структуры:
+
 struct DynamicFee {
     uint256 chainId;
     uint256 baseFee;
