@@ -784,4 +784,120 @@ function setFeeAdjustmentThreshold(uint256 chainId, uint256 newThreshold) extern
     
     emit FeeAdjustmentThresholdUpdated(chainId, newThreshold, block.timestamp);
 }
+    // Новые структуры для автоматического обновления комиссий
+    struct DynamicFee {
+        uint256 chainId;
+        uint256 baseFee;
+        uint256 marketConditionFactor;
+        uint256 networkCongestion;
+        uint256 timeBasedAdjustment;
+        uint256 lastUpdateTime;
+        uint256 feeAdjustmentThreshold;
+        uint256 maxFee;
+        uint256 minFee;
+        bool enabled;
+        uint256 feeAdjustmentWindow;
+        uint256[] feeHistory;
+        uint256[] marketDataHistory;
+        uint256[] networkDataHistory;
+        uint256[] adjustmentHistory;
+        mapping(uint256 => bool) isFeeAdjustmentApplied;
+    }
+    
+    struct FeeOptimizationConfig {
+        address[] targetChains;
+        uint256[] optimizationTargets;
+        uint256[] optimizationThresholds;
+        uint256[] optimizationWeights;
+        uint256[] optimizationPeriods;
+        uint256[] optimizationCapacities;
+        uint256[] optimizationFrequencies;
+        uint256[] optimizationMinFees;
+        uint256[] optimizationMaxFees;
+        bool[] optimizationEnabled;
+        uint256[] optimizationLastUpdates;
+        uint256[] optimizationCurrentFees;
+        uint256[] optimizationAvgFees;
+        uint256[] optimizationMinCapacities;
+        uint256[] optimizationMaxCapacities;
+        string[] optimizationMethods;
+    }
+    
+    struct FeeMarketData {
+        uint256 chainId;
+        uint256 transactionVolume;
+        uint256 gasPrice;
+        uint256 networkActivity;
+        uint256 priceImpact;
+        uint256 liquidity;
+        uint256 marketCap;
+        uint256 tradingVolume;
+        uint256 timestamp;
+        uint256[] recentVolumes;
+        uint256[] recentGasPrices;
+        uint256[] recentActivities;
+        uint256[] recentPrices;
+        uint256[] recentLiquidity;
+        uint256[] recentMarketCaps;
+        uint256[] recentTradingVolumes;
+    }
+    
+    struct FeeAdjustmentHistory {
+        uint256 chainId;
+        uint256 oldFee;
+        uint256 newFee;
+        uint256 timestamp;
+        string reason;
+        uint256 adjustmentType;
+        uint256 adjustmentValue;
+        uint256[] relatedMetrics;
+        uint256[] relatedFactors;
+        uint256[] adjustmentDetails;
+    }
+    
+    struct FeeOptimizationStrategy {
+        string strategyName;
+        uint256 strategyType;
+        uint256[] optimizationParameters;
+        uint256[] optimizationWeights;
+        uint256[] optimizationThresholds;
+        uint256[] optimizationCapacities;
+        uint256[] optimizationFrequencies;
+        uint256[] optimizationMinFees;
+        uint256[] optimizationMaxFees;
+        uint256[] optimizationLastUpdates;
+        uint256[] optimizationCurrentFees;
+        uint256[] optimizationAvgFees;
+        uint256[] optimizationMinCapacities;
+        uint256[] optimizationMaxCapacities;
+        bool[] optimizationEnabled;
+        uint256[] optimizationMetrics;
+        uint256[] optimizationFactors;
+        uint256[] optimizationResults;
+        uint256[] optimizationScores;
+        uint256[] optimizationRisks;
+        uint256[] optimizationRewards;
+        uint256[] optimizationCosts;
+        uint256[] optimizationBenefits;
+        uint256[] optimizationEfficiencies;
+        uint256[] optimizationPerformance;
+        uint256[] optimizationSensitivities;
+        uint256[] optimizationCorrelations;
+        uint256[] optimizationDependencies;
+        uint256[] optimizationConstraints;
+        uint256[] optimizationObjectives;
+        uint256[] optimizationAlternatives;
+        uint256[] optimizationDecisions;
+        uint256[] optimizationOutcomes;
+        uint256[] optimizationImpacts;
+        uint256[] optimizationRisks;
+        uint256[] optimizationOpportunities;
+        uint256[] optimizationThreats;
+        uint256[] optimizationRecommendations;
+        uint256[] optimizationActions;
+        uint256[] optimizationResources;
+        uint256[] optimizationTimeline;
+        uint256[] optimizationBudget;
+        uint256[] optimizationSuccess;
+        uint25
 }
