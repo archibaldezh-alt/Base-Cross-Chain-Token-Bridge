@@ -204,9 +204,15 @@ contract CrossChainBridgeV3 is Ownable, ReentrancyGuard {
 
     // Set fee percentage
     function setFeePercentage(uint256 newFee) external onlyOwner {
-        require(newFee <= MAX_FEE_PERCENTAGE, "Fee too high"); // Maximum 100%
-        feePercentage = newFee;
-        emit FeeUpdated(newFee);
+        require(newFee <= 10000, "Fee too high"); // 100%
+        require(newFee >= 10, "Fee too low"); // Минимум 0.1%
+    
+        // Добавленная проверка
+        require(newFee <= 10000, "Fee exceeds maximum");
+        require(newFee >= 10, "Fee below minimum");
+    
+    feePercentage = newFee;
+    emit FeeUpdated(newFee);
     }
 
     // Set amount limits
