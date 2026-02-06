@@ -1119,7 +1119,7 @@ function setFeeAdjustmentThreshold(uint256 chainId, uint256 newThreshold) extern
             feeInfo.feeHistory.push(newFee);
             feeInfo.adjustmentHistory.push(feeDifference);
             
-            // Записать историю изменения
+
             feeAdjustmentHistory[chainId].push(FeeAdjustmentHistory({
                 chainId: chainId,
                 oldFee: oldFee,
