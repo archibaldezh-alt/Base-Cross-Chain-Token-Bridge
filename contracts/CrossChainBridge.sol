@@ -911,7 +911,7 @@ function setFeeAdjustmentThreshold(uint256 chainId, uint256 newThreshold) extern
         uint256 timestamp
     );
     
-    // Новые функции для автоматического обновления комиссий
+
     function setDynamicFee(
         uint256 chainId,
         uint256 baseFee,
