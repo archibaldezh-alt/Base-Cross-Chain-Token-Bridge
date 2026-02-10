@@ -8,6 +8,7 @@ contract CrossChainTokenBridge is Ownable {
     uint256 public validatorCount;
     uint256 public threshold;
 
+
     event ValidatorAdded(address validator, uint256 validatorCount);
     event ValidatorRemoved(address validator, uint256 validatorCount);
     event ThresholdUpdated(uint256 threshold);
