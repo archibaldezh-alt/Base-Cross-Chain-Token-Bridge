@@ -2,8 +2,7 @@
 pragma solidity ^0.8.20;
 
 
-  - validator threshold signatures
-  - nonce replay protection
+
   - pausability by owner 
 */
 
