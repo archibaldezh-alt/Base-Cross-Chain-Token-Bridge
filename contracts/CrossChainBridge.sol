@@ -2,10 +2,6 @@
 pragma solidity ^0.8.20;
 
 
-
-  - pausability by owner 
-*/
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
