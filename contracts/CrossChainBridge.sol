@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/*
-  Educational ERC20 token bridge:
+
   - validator threshold signatures
   - nonce replay protection
   - pausability by owner 
