@@ -12,7 +12,7 @@ async function main() {
   const CrossChainBridge = await ethers.getContractFactory("CrossChainBridgeV3");
   const bridge = await CrossChainBridge.deploy(
     250, // 2.5% fee percentage
-    ethers.utils.parseEther("0.001"), // 0.001 ETH minimum amount
+    ethers.utils.parseEther("0.001"), 
     ethers.utils.parseEther("1000"), // 1000 ETH maximum amount
     3600 // 1 hour transaction timeout
   );
