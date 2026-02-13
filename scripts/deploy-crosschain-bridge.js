@@ -1,4 +1,4 @@
-// base-crosschain-token-bridge/scripts/deploy.js
+
 const { ethers } = require("hardhat");
 
 async function main() {
