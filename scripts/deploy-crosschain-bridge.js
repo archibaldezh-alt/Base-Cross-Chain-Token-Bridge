@@ -1,39 +1,55 @@
+const fs = require("fs");
+const path = require("path");
+require("dotenv").config();
 
-const { ethers } = require("hardhat");
-
-async function main() {
-  console.log("Deploying Base Cross-Chain Token Bridge...");
-  
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account:", deployer.address);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
-
-
-  const CrossChainBridge = await ethers.getContractFactory("CrossChainBridgeV3");
-  const bridge = await CrossChainBridge.deploy(
-    250, // 2.5% fee percentage
-    ethers.utils.parseEther("0.001"), 
-    ethers.utils.parseEther("1000"), // 1000 ETH maximum amount
-    3600 // 1 hour transaction timeout
-  );
-
-  await bridge.deployed();
-
-  console.log("Base Cross-Chain Token Bridge deployed to:", bridge.address);
-  
-  // Сохраняем адрес для дальнейшего использования
-  const fs = require("fs");
-  const data = {
-    bridge: bridge.address,
-    owner: deployer.address
-  };
-  
-  fs.writeFileSync("./config/deployment.json", JSON.stringify(data, null, 2));
+function parseList(v) {
+  return (v || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
+async function main() {
+  const [deployer] = await ethers.getSigners();
+  console.log("Deployer:", deployer.address);
+
+  let token = process.env.BRIDGE_TOKEN || "";
+  if (!token) {
+    const Token = await ethers.getContractFactory("TokenManager");
+    const t = await Token.deploy("BridgeToken", "BRG", 18);
+    await t.deployed();
+    token = t.address;
+    console.log("Deployed BridgeToken (TokenManager):", token);
+  }
+
+  const thisChainId = Number(process.env.THIS_CHAIN_ID || "8453");
+  const validators = parseList(process.env.VALIDATORS);
+  const threshold = Number(process.env.THRESHOLD || "1");
+  const finalValidators = validators.length ? validators : [deployer.address];
+
+  const Bridge = await ethers.getContractFactory("CrossChainTokenBridge");
+  const bridge = await Bridge.deploy(token, thisChainId, finalValidators, threshold);
+  await bridge.deployed();
+
+  console.log("CrossChainTokenBridge:", bridge.address);
+
+  const out = {
+    network: hre.network.name,
+    chainId: (await ethers.provider.getNetwork()).chainId,
+    deployer: deployer.address,
+    contracts: {
+      Token: token,
+      CrossChainTokenBridge: bridge.address
+    },
+    params: { thisChainId, validators: finalValidators, threshold }
+  };
+
+  const outPath = path.join(__dirname, "..", "deployments.json");
+  fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
+  console.log("Saved:", outPath);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
