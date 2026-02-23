@@ -43,7 +43,7 @@ module.exports = {
   },
 
 
-  // Keep default unless you have a custom /contracts path already.
+
   paths: {
     sources: "./contracts",
     tests: "./test",
