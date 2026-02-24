@@ -140,5 +140,5 @@ contract CrossChainTokenBridge is Ownable, Pausable, ReentrancyGuard {
     require(!isValidator[v], "exists");
     isValidator[v] = true;
     validatorCount++;
-}
+    }
 }
