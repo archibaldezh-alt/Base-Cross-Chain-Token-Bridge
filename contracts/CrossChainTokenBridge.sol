@@ -2,122 +2,139 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract CrossChainTokenBridge is Ownable, Pausable {
+contract LiquidityMining is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    IERC20 public token;
-    uint256 public thisChainId;
+    IERC20 public lpToken;
+    IERC20 public rewardToken;
 
-    mapping(address => bool) public isValidator;
-    uint256 public validatorCount;
-    uint256 public threshold;
+    uint256 public rewardPerSecond;
+    uint256 public lastUpdateTime;
+    uint256 public accRewardPerShare;
+    uint256 public totalStaked;
 
-    mapping(bytes32 => bool) public usedMessages;
-
-    event Locked(address indexed user, uint256 amount, uint256 indexed toChainId, uint256 nonce);
-    event Released(address indexed to, uint256 amount, uint256 indexed fromChainId, uint256 nonce);
-    event ValidatorAdded(address indexed validator);
-    event ValidatorRemoved(address indexed validator);
-    event ThresholdUpdated(uint256 newThreshold);
-    event ForeignTokenRescued(address indexed token, address indexed to, uint256 amount);
-
-    constructor(
-        address _token,
-        uint256 _thisChainId,
-        address[] memory validators,
-        uint256 _threshold
-    ) Ownable(msg.sender) {
-        require(_token != address(0), "token=0");
-        require(validators.length > 0, "no validators");
-        require(_threshold > 0 && _threshold <= validators.length, "bad threshold");
-
-        token = IERC20(_token);
-        thisChainId = _thisChainId;
-        threshold = _threshold;
-
-        for (uint256 i = 0; i < validators.length; i++) {
-            address v = validators[i];
-            require(v != address(0), "validator=0");
-            require(!isValidator[v], "dup");
-            isValidator[v] = true;
-            validatorCount++;
-            emit ValidatorAdded(v);
-        }
+    struct UserInfo {
+        uint256 amount;
+        uint256 rewardDebt;
     }
 
-    function lock(uint256 amount, uint256 toChainId, uint256 nonce) external whenNotPaused {
-        require(amount > 0, "amount=0");
-        require(toChainId != thisChainId, "same chain");
+    mapping(address => UserInfo) public users;
 
-        token.safeTransferFrom(msg.sender, address(this), amount);
-        emit Locked(msg.sender, amount, toChainId, nonce);
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amount);
+    event Claim(address indexed user, uint256 amount);
+    event EmergencyWithdraw(address indexed user, uint256 amount);
+    event RewardPerSecondUpdated(uint256 oldValue, uint256 newValue);
+    event Recovered(address indexed token, address indexed to, uint256 amount);
+
+    constructor(address _lpToken, address _rewardToken, uint256 _rewardPerSecond) Ownable(msg.sender) {
+        lpToken = IERC20(_lpToken);
+        rewardToken = IERC20(_rewardToken);
+        rewardPerSecond = _rewardPerSecond;
+        lastUpdateTime = block.timestamp;
     }
 
-    function release(
-        address to,
-        uint256 amount,
-        uint256 fromChainId,
-        uint256 nonce
-    ) external whenNotPaused {
-        require(isValidator[msg.sender], "not validator");
-        require(to != address(0), "to=0");
-        require(fromChainId != thisChainId, "bad chain");
-
-        bytes32 messageId = keccak256(abi.encodePacked(fromChainId, nonce));
-        require(!usedMessages[messageId], "already processed");
-
-        usedMessages[messageId] = true;
-        token.safeTransfer(to, amount);
-
-        emit Released(to, amount, fromChainId, nonce);
-    }
-
-    function addValidator(address v) external onlyOwner {
-        require(v != address(0), "validator=0");
-        require(!isValidator[v], "exists");
-
-        isValidator[v] = true;
-        validatorCount++;
-        emit ValidatorAdded(v);
-    }
-
-    function removeValidator(address v) external onlyOwner {
-        require(isValidator[v], "not validator");
-        require(validatorCount > 1, "last validator");
-
-        isValidator[v] = false;
-        validatorCount--;
-
-        if (threshold > validatorCount) {
-            threshold = validatorCount;
-            emit ThresholdUpdated(threshold);
+    function _updatePool() internal {
+        if (block.timestamp <= lastUpdateTime) return;
+        if (totalStaked == 0) {
+            lastUpdateTime = block.timestamp;
+            return;
         }
 
-        emit ValidatorRemoved(v);
+        uint256 elapsed = block.timestamp - lastUpdateTime;
+        uint256 reward = elapsed * rewardPerSecond;
+
+        accRewardPerShare += (reward * 1e12) / totalStaked;
+        lastUpdateTime = block.timestamp;
     }
 
-    function setThreshold(uint256 newThreshold) external onlyOwner {
-        require(newThreshold > 0 && newThreshold <= validatorCount, "bad threshold");
-        threshold = newThreshold;
-        emit ThresholdUpdated(newThreshold);
+    function deposit(uint256 amount) external nonReentrant {
+        UserInfo storage user = users[msg.sender];
+
+        _updatePool();
+
+        if (user.amount > 0) {
+            uint256 pending = (user.amount * accRewardPerShare) / 1e12 - user.rewardDebt;
+            if (pending > 0) {
+                rewardToken.safeTransfer(msg.sender, pending);
+                emit Claim(msg.sender, pending);
+            }
+        }
+
+        lpToken.safeTransferFrom(msg.sender, address(this), amount);
+
+        user.amount += amount;
+        totalStaked += amount;
+        user.rewardDebt = (user.amount * accRewardPerShare) / 1e12;
+
+        emit Deposit(msg.sender, amount);
     }
 
-    function rescueForeignToken(address foreignToken, address to, uint256 amount) external onlyOwner {
-        require(foreignToken != address(token), "bridge token blocked");
+    function withdraw(uint256 amount) external nonReentrant {
+        UserInfo storage user = users[msg.sender];
+        require(user.amount >= amount, "too much");
+
+        _updatePool();
+
+        uint256 pending = (user.amount * accRewardPerShare) / 1e12 - user.rewardDebt;
+        if (pending > 0) {
+            rewardToken.safeTransfer(msg.sender, pending);
+            emit Claim(msg.sender, pending);
+        }
+
+        user.amount -= amount;
+        totalStaked -= amount;
+        user.rewardDebt = (user.amount * accRewardPerShare) / 1e12;
+
+        lpToken.safeTransfer(msg.sender, amount);
+
+        emit Withdraw(msg.sender, amount);
+    }
+
+    function claim() external nonReentrant {
+        UserInfo storage user = users[msg.sender];
+
+        _updatePool();
+
+        uint256 pending = (user.amount * accRewardPerShare) / 1e12 - user.rewardDebt;
+        require(pending > 0, "no rewards");
+
+        user.rewardDebt = (user.amount * accRewardPerShare) / 1e12;
+
+        rewardToken.safeTransfer(msg.sender, pending);
+        emit Claim(msg.sender, pending);
+    }
+
+    function emergencyWithdraw() external nonReentrant {
+        UserInfo storage user = users[msg.sender];
+        uint256 amount = user.amount;
+        require(amount > 0, "zero");
+
+        user.amount = 0;
+        user.rewardDebt = 0;
+        totalStaked -= amount;
+
+        lpToken.safeTransfer(msg.sender, amount);
+
+        emit EmergencyWithdraw(msg.sender, amount);
+    }
+
+    function setRewardPerSecond(uint256 newRate) external onlyOwner {
+        _updatePool();
+        uint256 oldValue = rewardPerSecond;
+        rewardPerSecond = newRate;
+        emit RewardPerSecondUpdated(oldValue, newRate);
+    }
+
+    function recoverERC20(address token, address to, uint256 amount) external onlyOwner {
+        require(token != address(lpToken), "no lp");
+        require(token != address(rewardToken), "no reward");
         require(to != address(0), "to=0");
 
-        IERC20(foreignToken).safeTransfer(to, amount);
-        emit ForeignTokenRescued(foreignToken, to, amount);
-    }
-
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
+        IERC20(token).safeTransfer(to, amount);
+        emit Recovered(token, to, amount);
     }
 }
